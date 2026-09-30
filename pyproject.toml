@@ -1,0 +1,32 @@
+[project]
+name = "kkk"
+version = "0.1.0"
+description = "RK3588 零拷贝视频链路：MPP 硬解 → RGA 转色 → RKNN NPU 推理"
+# 文档在同级（kkk/README.md，含移植与新板子依赖清单），这里不放 readme 字段
+# 锁 3.10：rknn-toolkit2 的 aarch64 wheel 只发到 cp310
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "numpy>=2.2.6",
+    "opencv-python>=5.0.0.93",
+    # 提供 pybind11 头文件 + pybind11Config.cmake（CMakeLists 靠它，不用 apt 的 pybind11-dev）
+    "pybind11>=2.13",
+    # rknn-toolkit2 故意不装（板上跑推理走 rknn_rt.py，ctypes 直调 third_party 里的
+    # librknnrt.so）。原因有两条，都实测过：
+    #   1. 依赖直接冲突：rknn-toolkit2 要 numpy<=1.26.4，本项目要 numpy>=2.2.6，
+    #      uv 连解都解不出来（"your project and rknn-toolkit2 are incompatible"）
+    #   2. 即使解开也要背 torch+onnx+onnxruntime+scipy ≈2.5GB
+    # 只有"把 .pt 转成 .rknn"这一步需要它，而那一步在 x86 PC 上做（见 README 转换章节）
+    # "rknn-toolkit2==2.3.2",
+]
+
+# 关键：这不是一个 Python 包，别让 uv 去找 src/kkk/__init__.py
+# （就是 uv_build 后端的默认 src 布局约定触发了 "Expected a Python module at: src/kkk/__init__.py"）
+[tool.uv]
+package = false
+
+# 构建工具也走 .venv：cmake/ninja 在 PyPI 上都有 manylinux aarch64 wheel
+[dependency-groups]
+dev = [
+    "cmake>=3.22",
+    "ninja>=1.11",
+]
