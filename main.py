@@ -97,19 +97,19 @@ if __name__ == "__main__":
         {
             "npu": 0,
             "frame_step": 5,
-            "model": "yolo26n_352x640_rk3588_fp16.rknn",
+            "model": "assets/yolo26n_352x640_rk3588_fp16.rknn",
             "input_url": "rtsp://172.16.3.210:8554/live/stream1",
         },
         {
             "npu": 1,
             "frame_step": 5,
-            "model": "yolo26n_352x640_rk3588_fp16.rknn",
+            "model": "assets/yolo26n_352x640_rk3588_fp16.rknn",
             "input_url": "rtsp://172.16.3.210:8554/live/stream1",
         },
         {
             "npu": 2,
             "frame_step": 5,
-            "model": "yolo26n_352x640_rk3588_fp16.rknn",
+            "model": "assets/yolo26n_352x640_rk3588_fp16.rknn",
             "input_url": "rtsp://172.16.3.210:8554/live/stream1",
         },
     ]

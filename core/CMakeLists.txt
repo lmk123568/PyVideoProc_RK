@@ -6,13 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)  # 构建产物直接采用 INSTALL_RPATH
 
 # ---------------------------------------------------------------- Python 侧
-#
-# 解释器钉死在项目自带的 .venv（uv 管的 CPython + pyproject 锁的 numpy 2.x）。
-# 不钉的话 pybind11 会摸到 PATH 里的系统 python3：它的 numpy 是 1.x，于是
-# NUMPY_INCLUDE 指向 1.x 头文件，而运行时 import 的是 .venv 的 numpy 2.x ——
-# 跨大版本混编（pybind11 3.x 能吃下，但纯属侥幸，不该靠）。
-# 必须在 find_package(pybind11) 之前设：pybind11 的 FindPythonLibsNew 认的是
-# PYTHON_EXECUTABLE 这个缓存变量，Python_EXECUTABLE 它不认（实测传了也没用）。
+# 解释器走 .venv
 set(VENV_PYTHON "${CMAKE_CURRENT_SOURCE_DIR}/../.venv/bin/python")
 if(NOT EXISTS "${VENV_PYTHON}")
     message(WARNING "没找到 ${VENV_PYTHON}，退回系统 python3 —— 先 uv sync")
@@ -20,16 +14,14 @@ if(NOT EXISTS "${VENV_PYTHON}")
 endif()
 set(PYTHON_EXECUTABLE "${VENV_PYTHON}" CACHE FILEPATH "Python 解释器（项目 .venv）" FORCE)
 
-# pybind11 也走 .venv（pyproject 的依赖），不用 apt 的 pybind11-dev。
-# 不显式加前缀的话 find_package 会摸到系统那份 2.9.1 —— 它早于 numpy 2，
-# 和上面钉的 numpy 2.x 头文件混编有 ABI 风险（实测不带前缀就是找到 2.9.1）。
-# 用 glob 而不是写死 python3.10：pyproject 锁 >=3.10,<3.11，别在这再钉一次版本。
+# pybind11 走 .venv 不用 apt 的 pybind11-dev
 file(GLOB _venv_pybind11 "${CMAKE_CURRENT_SOURCE_DIR}/../.venv/lib/python3.*/site-packages/pybind11")
 if(_venv_pybind11)
     list(GET _venv_pybind11 0 _venv_pybind11)
     list(PREPEND CMAKE_PREFIX_PATH "${_venv_pybind11}")
 endif()
 
+set(PYBIND11_FINDPYTHON ON)  # 走新的 FindPython，别用被 CMP0148 废弃的老 FindPythonLibs
 find_package(pybind11 REQUIRED)  # 在 .venv 里寻找
 
 # numpy 头文件位置：问同一个解释器要，保证编译期头文件与运行期 numpy 同一份
@@ -103,7 +95,8 @@ endif()
 set(CMAKE_REQUIRED_LIBRARIES ${RGA_LIBRARIES})
 check_cxx_source_compiles([[
 #include <cstddef>          /* im2d.h 里用了 NULL 却没包 cstddef，得先垫上 */
-#include <rga/im2d.h>
+#include <rga/im2d.hpp>     /* 10 参 C++ 重载声明在 .hpp 里，.h 只是 C 版 7 参，且不会自动 include .hpp */
+#include <rga/rga.h>        /* RK_FORMAT_* 枚举定义在这两个都不会自动带入 */
 int main() {
     /* 本代码依赖的两个新 API，各自测一遍（都实测过、不是照文档猜的）：
      *   1. wrapbuffer_fd_t 带 w/h/stride 的 6 参版本（老版本只有 2 参）
@@ -113,7 +106,7 @@ int main() {
      *      只测名字测不出来，必须按 10 参调用才能逼编译器选中那个重载。
      * 不测 RGA_CURRENT_API_HEADER_VERSION：那是头文件宏，只反映头文件、
      * 反映不了 .so；且万一新版本把宏删了，预处理按 0 算 → 好板子误报。
-     * 头文件与库是否配对，交给运行时 imcheckHeader()（见 rga_convert.cpp）。 */
+     * 运行期只打个版本日志（见 rga_convert.cpp 的 rga_check_api）。 */
     rga_buffer_t src = wrapbuffer_fd_t(0, 16, 16, 16, 16, RK_FORMAT_RGB_888);
     rga_buffer_t dst = wrapbuffer_fd_t(0, 16, 16, 16, 16, RK_FORMAT_RGB_888);
     rga_buffer_t pat = {};

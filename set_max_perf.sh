@@ -29,12 +29,15 @@ set_governor() {
     return 0
 }
 
-DMC=$(find_dev dmc) || { echo "[npu-perf] 找不到 dmc" >&2; exit 1; }
+# dmc 在部分 RK3588 内核/DTB 里被禁用，找不到时降级跳过，不报错
+DMC=$(find_dev dmc) || DMC=""
 NPU=$(find_dev fdab0000.npu) || NPU=""
 
 fail=0
 
-if ! set_governor "$DMC" performance; then
+if [ -z "$DMC" ]; then
+    echo "[npu-perf] 未找到 dmc devfreq（设备树已禁用 DDR 调频），跳过锁频" >&2
+elif ! set_governor "$DMC" performance; then
     echo "[npu-perf] dmc 无法设为 performance，当前=$(cat "$DMC/governor" 2>/dev/null)" >&2
     fail=1
 else
@@ -63,10 +66,12 @@ done
 echo "[npu-perf] 大核 CPU 锁定 performance 数量: $_n"
 
 echo "[npu-perf] 当前状态："
-printf '  dmc  governor=%s freq=%s / max %s\n' \
-    "$(cat "$DMC/governor" 2>/dev/null)" \
-    "$(cat "$DMC/cur_freq" 2>/dev/null)" \
-    "$(cat "$DMC/max_freq" 2>/dev/null)"
+if [ -n "$DMC" ]; then
+    printf '  dmc  governor=%s freq=%s / max %s\n' \
+        "$(cat "$DMC/governor" 2>/dev/null)" \
+        "$(cat "$DMC/cur_freq" 2>/dev/null)" \
+        "$(cat "$DMC/max_freq" 2>/dev/null)"
+fi
 if [ -n "$NPU" ]; then
     printf '  npu  governor=%s freq=%s / max %s  load=%s\n' \
         "$(cat "$NPU/governor" 2>/dev/null)" \
@@ -79,4 +84,8 @@ if [ "$fail" -ne 0 ]; then
     exit 1
 fi
 
-echo '[npu-perf] 已完成：DMC/NPU/大核 CPU 均锁定最高性能'
+if [ -n "$DMC" ]; then
+    echo '[npu-perf] 已完成：DMC/NPU/大核 CPU 均锁定最高性能'
+else
+    echo '[npu-perf] 已完成：NPU/大核 CPU 锁定最高性能（DMC 未启用，已跳过）'
+fi

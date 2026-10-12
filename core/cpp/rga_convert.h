@@ -17,11 +17,8 @@ bool rga_nv12_to_rgb_strided(int src_fd, int src_w, int src_h,
                              int dst_fd, int dst_w, int dst_h);
 
 /*
- * 编译时用的头文件版本，和板上运行库版本是否配对（RGA 自带的 imcheckHeader）。
- * 用 RGA 之前调一次；不配对抛 std::runtime_error。
- *
- * 为什么必须运行时查：CMake 那条检测只能验头文件（编译期），验不了 .so。
- * librga-dev 的 Depends 是空的（librockchip-mpp-dev 有 = 精确 pin，librga 没有），
- * 理论上头和库可以漂开 —— 漂开的后果不是报错而是花屏，所以宁可提前拦。
+ * 启动时把运行库版本打到 stderr（querystring(RGA_VERSION)），方便排查版本漂开。
+ * 不再用 imcheckHeader() 做硬配对检查 —— 那是 im2d API 1.9.3+ 才有的，老库
+ * 头文件/.so 都没这符号，硬上编译不过。API 够用与否由 CMake 实测把关。
  */
 void rga_check_api();

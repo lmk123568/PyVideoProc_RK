@@ -23,13 +23,14 @@
 > ```
 >
 > 导出模型，在开发板上跑通`yolo26_rk.py`即验证成功
+> （项目已包含 `yolo26n_352x640_fp16.rknn`，可快速测试）
 
 开发板安装包
 
 ```bash
 sudo apt install git build-essential ffmpeg pkg-config librockchip-mpp-dev librga-dev librga2
 # 安装 uv
-curl -LsSf https://astral.sh/uv/install.sh \| sh
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 克隆本仓库
