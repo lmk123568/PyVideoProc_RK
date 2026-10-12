@@ -79,10 +79,10 @@ uv run python main.py
 
 |           | CPU  | NPU                                | RAM     | YOLO Infer   |
 | --------- | ---- | ---------------------------------- | ------- | ------------ |
-| 3路@5fps  | 6%   | Core0: 11%, Core1: 12%, Core2: 12% | 2.46 GB | 48 ms/frame  |
-| 6路@5fps  | 11%  | Core0: 23%, Core1: 23%, Core2: 24% | 2.72 GB | 73 ms/frame  |
-| 9路@5fps  | 15%  | Core0: 40%, Core1: 42%, Core2: 41% | 3.02 GB | 98 ms/frame  |
-| 12路@5fps | 20%  | Core0: 56%, Core1: 59%, Core2: 57% | 3.29 GB | 125 ms/frame |
+| 3路  | 6%   | Core0: 11%, Core1: 12%, Core2: 12% | 2.46 GB | 48 ms/frame  |
+| 6路  | 11%  | Core0: 23%, Core1: 23%, Core2: 24% | 2.72 GB | 73 ms/frame  |
+| 9路  | 15%  | Core0: 40%, Core1: 42%, Core2: 41% | 3.02 GB | 98 ms/frame  |
+| 12路 | 20%  | Core0: 56%, Core1: 59%, Core2: 57% | 3.29 GB | 125 ms/frame |
 
 
 
