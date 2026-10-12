@@ -4,10 +4,10 @@
 
 核心特性：
 
-- MPP 硬解码
-- RGA 硬件转色缩放
+- MPP 硬解码加速
+- RGA 硬件转色缩放加速
 - 数据 dma_buf 零拷贝优化
-- Python NPU 推理
+- Python 多进程并行推理，绕过 GIL 限制
 
 🔥 基于 CUDA 的 Python 多进程多路视频解码推理实现：[lmk123568/PyVideoProc](https://github.com/lmk123568/PyVideoProc)
 
@@ -43,16 +43,27 @@ git clone https://github.com/lmk123568/PyVideoProc_RK.git
 
 ```bash
 cd PyVideoProc_RK
+# 安装依赖
 uv sync
+# 编译 c++
 uv run cmake -S core -B core/build
 uv run cmake --build core/build
-```
-
-打开`main.py`，阅读并修改添加视频流
-
-```bash
 # 开启性能模式
 bash set_max_perf.sh
+```
+
+测试 yolo26 模型
+
+```bash
+uv run python yolo26_rk.py
+```
+
+测试多路视频解码推理
+
+打开`main.py`，修改添加视频流
+
+```bash
+
 # 运行
 uv run python main.py
 ```
@@ -61,7 +72,7 @@ uv run python main.py
 
 路数均分给 3 个 npu 核
 
-- 测试模型 `yolo26n_352x640_fp16.rknn`
+- 测试模型 `assets/yolo26n_352x640_fp16.rknn`
 - 测试视频流 `h264 1980x1280@25fps`
 - RK3588 锁最高性能
 
