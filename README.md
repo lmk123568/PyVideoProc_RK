@@ -7,9 +7,9 @@
 - MPP 硬解码加速
 - RGA 硬件转色缩放加速
 - 数据 dma_buf 零拷贝优化
-- Python 多进程并行推理，绕过 GIL 限制
+- C++做计算，Python做业务，快速定制开发
 
-🔥 基于 CUDA 的 Python 多进程多路视频解码推理实现：[lmk123568/PyVideoProc](https://github.com/lmk123568/PyVideoProc)
+🔥🔥🔥 [基于 CUDA 的 Python 多进程多路视频解码推理实现](https://github.com/lmk123568/PyVideoProc)
 
 ## Usage
 
@@ -23,7 +23,8 @@
 > ```
 >
 > 导出模型，在开发板上跑通`yolo26_rk.py`即验证成功
-> （项目已包含 `yolo26n_352x640_fp16.rknn`，可快速测试）
+>
+> （本项目已包含 `yolo26n_352x640_fp16.rknn`，可快速测试）
 
 开发板安装包
 
