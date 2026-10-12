@@ -7,11 +7,21 @@
  * UV 面起始偏移 = hstride×vstride，RGA 靠传入正确 stride 自己算 —— 所以
  * 这里只提供带 stride 的版本。
  *
- * 只出 BGR：下游是 OpenCV 系（cv2.imread/imwrite/VideoCapture 全是 BGR 约定），
- * rk_decoder.cpp 拿到的帧直接就能画框/存图。要 RGB 输出（比如喂 mobilenet），
- * 把 dst_format 换成 RK_FORMAT_RGB_888 加个孪生函数即可 —— 根目录 zcp/ 那份
- * 留了 rgb / rgb_strided 两个版本可抄。
+ * 只出 RGB：下游是 NPU 推理 —— ultralytics 导出的模型（.onnx/.rknn）要的就是
+ * RGB，转色在 RGA 里顺手做掉，Python 侧拿到帧直接喂 rknn，不用再 cv2.cvtColor
+ * 过一遍 CPU。要 BGR（cv2.imshow/imwrite 那套 OpenCV 约定）把 dst_format 换成
+ * RK_FORMAT_BGR_888 即可。
  */
-bool rga_nv12_to_bgr_strided(int src_fd, int src_w, int src_h,
+bool rga_nv12_to_rgb_strided(int src_fd, int src_w, int src_h,
                              int src_hs, int src_vs,
                              int dst_fd, int dst_w, int dst_h);
+
+/*
+ * 编译时用的头文件版本，和板上运行库版本是否配对（RGA 自带的 imcheckHeader）。
+ * 用 RGA 之前调一次；不配对抛 std::runtime_error。
+ *
+ * 为什么必须运行时查：CMake 那条检测只能验头文件（编译期），验不了 .so。
+ * librga-dev 的 Depends 是空的（librockchip-mpp-dev 有 = 精确 pin，librga 没有），
+ * 理论上头和库可以漂开 —— 漂开的后果不是报错而是花屏，所以宁可提前拦。
+ */
+void rga_check_api();

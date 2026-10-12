@@ -71,6 +71,11 @@ RtspH264Source::RtspH264Source(const std::string &url)
             (char *)"-i",         (char *)url.c_str(),
             (char *)"-map",       (char *)"0:v:0",   /* 只要第一路视频 */
             (char *)"-c",         (char *)"copy",    /* 不重编码，只拆包 */
+            /* RTSP 的 SPS/PPS 是带外的（在 SDP 里），-f h264 这个裸流 muxer
+             * 不会把它写进输出，MPP 拿不到参数集就一帧都解不出来。dump_extra
+             * 只是把 extradata 里的 SPS/PPS 作为前置 NAL 插回每个关键帧前，
+             * 不重编码、不碰像素 */
+            (char *)"-bsf:v",     (char *)"dump_extra",
             (char *)"-f",         (char *)"h264",    /* Annex-B 裸流 */
             (char *)"pipe:1",
             nullptr};

@@ -5,6 +5,12 @@ __pycache__/
 
 # C extensions
 *.so
+# 例外：core/rknn/librknnrt.so 要进版本库。
+# rknn 的 NPU 驱动版本必须和这个 userspace 库配对，板子上不一定装得对，
+# 所以自带一份、整包拷到新板子就能跑。mpp/rga 则相反，用板子自带的
+# （见 core/CMakeLists.txt 里的 pkg-config 说明），所以不在这里放行。
+# 注意：这条必须排在 *.so 后面。
+!core/rknn/*.so
 
 # Distribution / packaging
 .Python
@@ -14,8 +20,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
@@ -178,5 +182,5 @@ cython_debug/
 *.safetensors
 *.trt
 *.engine
-*.rknn
+# *.rknn
 *.claude

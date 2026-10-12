@@ -8,7 +8,7 @@
  *
  *     dec = rk_decoder.MppDecoder(rtsp_url)     # 或本地 H.264 裸流路径
  *     dec.start()                               # 后台线程：拉流→硬解→RGA
- *     frame = dec.read()                        # (H,W,3) uint8 BGR / None
+ *     frame = dec.read()                        # (H,W,3) uint8 RGB / None
  *     dec.stop()
  *
  * 常用参数（都是关键字参数，默认值即"不改行为"）：
@@ -17,7 +17,7 @@
  *
  * 每一帧的通路（全程零 CPU 像素搬运，直到 Python 侧才读）：
  *   ffmpeg(fork) →管道→ MPP no-thread 硬解 → NV12 dma_buf（16 对齐 stride）
- *   → RGA 转色 → BGR dma_buf（池 slot）→ 队列 → read() 包成 numpy 视图
+ *   → RGA 转色 → RGB dma_buf（池 slot）→ 队列 → read() 包成 numpy 视图
  *
  * 队列语义（实时检测的取舍）：
  *   - 容量 queue_len，满则丢最旧（推理慢就跳帧追新，不攒旧账）
@@ -94,6 +94,12 @@ public:
             throw std::invalid_argument("out_width/out_height 要么都给，要么都给 0");
         if (out_w_ < 0 || out_h_ < 0)
             throw std::invalid_argument("out_width/out_height 不能为负");
+
+        /* 只有真要转色（out_w_ > 0）才用得到 RGA。放在构造函数里而不是解码
+         * 线程里：抛出来直接变成 Python 侧的异常，一眼看到；丢进解码线程就
+         * 只剩 rga_fail 计数涨，难查。 */
+        if (out_w_ > 0)
+            rga_check_api();
     }
 
     ~RkDecoder() { stop(); }
@@ -112,7 +118,7 @@ public:
         running_   = true;
         th_ = std::thread(&RkDecoder::thread_main, this);
         if (step_ > 1)
-            rkd_log("start: %s（抽帧：每 %d 帧取 1 帧）\n", url_.c_str(), step_);
+            rkd_log("start: %s, 每 %d 帧取 1 帧 \n", url_.c_str(), step_);
         else
             rkd_log("start: %s\n", url_.c_str());
     }
@@ -282,7 +288,7 @@ private:
                                                          /*quiet=*/true);
                     w_.store(pw);
                     h_.store(ph);
-                    rkd_log("RGA 输出池就绪: 源 %dx%d → %dx%d BGR × %d slots\n",
+                    rkd_log("RGA 输出池就绪: 源 %dx%d → %dx%d RGB × %d slots\n",
                             fi.width, fi.height, pw, ph, nslots_);
                 }
                 sw_.store(fi.width);
@@ -307,7 +313,7 @@ private:
                 continue;
             }
 
-            bool ok = rga_nv12_to_bgr_strided(fi.fd, fi.width, fi.height,
+            bool ok = rga_nv12_to_rgb_strided(fi.fd, fi.width, fi.height,
                                               fi.hor_stride, fi.ver_stride,
                                               pool_->buf(slot).fd,
                                               pool_->width(), pool_->height());
@@ -376,7 +382,7 @@ private:
 
 PYBIND11_MODULE(rk_decoder, m)
 {
-    m.doc() = "MPP 硬解 → RGA NV12→BGR → numpy 零拷贝视图"
+    m.doc() = "MPP 硬解 → RGA NV12→RGB → numpy 零拷贝视图"
               "（后台线程 + 有界队列；复用 cpp/ 里阶段 1/2/3 积木）";
 
     py::class_<RkDecoder>(m, "MppDecoder")
@@ -400,7 +406,7 @@ PYBIND11_MODULE(rk_decoder, m)
         .def("stop", &RkDecoder::stop,
              "停止线程 + 清空队列（幂等；已发出去的帧视图仍然有效）")
         .def("read", &RkDecoder::read, py::arg("timeout_ms") = 0,
-             "取一帧 (H,W,3) uint8 BGR —— dma_buf 零拷贝视图；None = 暂时没帧。"
+             "取一帧 (H,W,3) uint8 RGB —— dma_buf 零拷贝视图；None = 暂时没帧。"
              "注意：攥着帧就占着池 slot，全攥满会丢新帧")
         .def_property_readonly("frame_count", &RkDecoder::frame_count,
              "已解出的帧数（含被队列丢弃的）")

@@ -2,9 +2,49 @@
 
 #include <cstdio>
 #include <cstring>
+#include <stdexcept>
+#include <string>
 
 #include <rga/im2d.h>
 #include <rga/rga.h>
+
+/* 头文件 vs 运行库，配对检查。放在这个文件里是因为它跟 improcess 的调用
+ * 约定是同一件事：头文件版本决定参数语义，库版本决定实际行为，两者漂开
+ * 就是"编译过、跑起来花屏"。 */
+void rga_check_api()
+{
+    /* 默认参数就是 RGA_CURRENT_API_HEADER_VERSION —— 即"我编译时用的头文件
+     * 版本"，问库认不认。配对返回 SUCCESS/NOERROR，不配对返回
+     * IM_STATUS_ERROR_VERSION(-5)。 */
+    const IM_STATUS st = imcheckHeader(RGA_CURRENT_API_HEADER_VERSION);
+    if (st != IM_STATUS_SUCCESS && st != IM_STATUS_NOERROR) {
+        /* 用 std::string 拼而不是定长 buffer + snprintf：中文一个字符 3 字节，
+         * 定长很容易悄悄截断（第一版 320 字节就踩了 -Wformat-truncation）。 */
+        char hdr[16];
+        std::snprintf(hdr, sizeof(hdr), "0x%08x",
+                      (unsigned)RGA_CURRENT_API_HEADER_VERSION);
+        throw std::runtime_error(
+            std::string("RGA 头文件与运行库不配对：imcheckHeader = ")
+            + std::to_string((int)st) + " (" + imStrError_t(st) + ")\n"
+              "  编译时头文件 API 版本 = " + hdr + "\n"
+              "  多半是 librga-dev 和 librga2 版本不一致 —— librga-dev 的 Depends\n"
+              "  是空的，apt 不会把两者对齐。\n"
+              "  修：sudo apt install --reinstall librga-dev librga2\n"
+              "  （或让 pkg-config 指向版本正确的那份）");
+    }
+
+    /* 过了也要打一行 —— 因为 imcheckHeader 只拦一个方向（实测）：
+     *   传入 0x01090302（编译时的头）  -> 成功
+     *   传入 0x02000000（比库新）      -> 成功   ← 放行
+     *   传入 0x01000000（比库老）      -> -5     ← 只拦这个
+     * 所以"头文件比库新"它查不出来，而 librga-dev 的 Depends 是空的、正好
+     * 可能漂成那样。那行日志是这种情况下唯一的线索。
+     * querystring 返回多行，只取第一行（"RGA_api version : v1.9.3_[2]"）。 */
+    const char *ver = querystring(RGA_VERSION);
+    const std::string first(ver, std::strcspn(ver, "\n"));
+    std::fprintf(stderr, "[cpp] RGA 就绪：头文件 API 0x%08x，运行库 %s\n",
+                 (unsigned)RGA_CURRENT_API_HEADER_VERSION, first.c_str());
+}
 
 /* 公共骨架：wrap fd → 显式 rect → 同步 improcess。
  * 带真实 stride：MPP 解码帧的 Y 面是 hs×vs（16 对齐），UV 面在 hs*vs
@@ -46,10 +86,10 @@ static bool rga_nv12_convert_strided(int src_fd, int src_w, int src_h,
     return true;
 }
 
-bool rga_nv12_to_bgr_strided(int src_fd, int src_w, int src_h,
+bool rga_nv12_to_rgb_strided(int src_fd, int src_w, int src_h,
                              int src_hs, int src_vs,
                              int dst_fd, int dst_w, int dst_h)
 {
     return rga_nv12_convert_strided(src_fd, src_w, src_h, src_hs, src_vs,
-                                    dst_fd, dst_w, dst_h, RK_FORMAT_BGR_888);
+                                    dst_fd, dst_w, dst_h, RK_FORMAT_RGB_888);
 }
