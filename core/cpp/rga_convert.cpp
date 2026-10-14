@@ -1,29 +1,73 @@
 #include "rga_convert.h"
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <cstdio>
 #include <cstring>
 #include <string>
 
 #include <rga/im2d.hpp>   /* 10 参 C++ 重载在 .hpp 里；.h 只有 C 版 7 参且不会自动 include .hpp */
+#include <rga/im2d_common.h>   /* imconfig() */
 #include <rga/rga.h>
 
-/* 运行库版本打日志。
+static std::string g_rga_ver;
+
+/* 探测运行库并把版本缓存下来（不打印）。
+ *
+ * 为什么不打印：librga 首次调用会自己往 stdout 打一行
+ *   rga_api version 1.10.0_[8]
+ * 每个进程都会有，和我们的日志混在一起。这里把这次初始化调用期间的 stdout
+ * 临时指向 /dev/null 吞掉那行，版本号自己收进来，随 rk_decoder 的汇总行一起输出。
  *
  * 为什么不做"头文件 vs 运行库配对检查"：那套要用 imcheckHeader() +
- * RGA_CURRENT_API_HEADER_VERSION，是 im2d API 1.9.3 才加的；老库（比如这块
- * 板子的 1.8.1_[4]）头文件和 .so 里都没这俩符号 —— 硬上就编译不过，反而
- * 把兼容性卡死。所以这里只 querystring 一下、把运行库版本打到 stderr，真要
- * 排查版本漂开时人能看到。配对检查的硬拦截留给 CMake 的 API 实测。 */
+ * RGA_CURRENT_API_HEADER_VERSION，是 im2d API 1.9.3 才加的；老库里没这符号，
+ * 硬上就编译不过。配对检查的硬拦截留给 CMake 的 API 实测。 */
 void rga_check_api()
 {
-    /* querystring(RGA_VERSION) 返回多行，只取第一行（"RGA_api version : v1.8.1_[4]"）。 */
-    const char *ver = querystring(RGA_VERSION);
-    if (ver && *ver) {
-        const std::string first(ver, std::strcspn(ver, "\n"));
-        std::fprintf(stderr, "[cpp] RGA 就绪：运行库 %s\n", first.c_str());
-    } else {
-        std::fprintf(stderr, "[cpp] RGA 就绪：querystring(RGA_VERSION) 返回空\n");
+    std::fflush(stdout);
+    int saved  = ::dup(STDOUT_FILENO);
+    int nullfd = ::open("/dev/null", O_WRONLY);
+    if (nullfd >= 0)
+        ::dup2(nullfd, STDOUT_FILENO);
+
+    const char *ver = querystring(RGA_VERSION);   /* 首次 RGA 调用：库在此初始化 */
+
+    if (nullfd >= 0) {
+        std::fflush(stdout);
+        ::dup2(saved, STDOUT_FILENO);
+        ::close(nullfd);
     }
+    if (saved >= 0)
+        ::close(saved);
+
+    /* 返回多行，取第一行，再取冒号后的部分（"RGA_api version : v1.10.0_[8]" → "v1.10.0_[8]"） */
+    if (ver && *ver) {
+        std::string first(ver, std::strcspn(ver, "\n"));
+        const char *colon = std::strrchr(first.c_str(), ':');
+        std::string val   = colon ? std::string(colon + 1) : first;
+        size_t pos = val.find_first_not_of(" \t");
+        g_rga_ver = (pos == std::string::npos) ? val : val.substr(pos);
+    }
+}
+
+const char *rga_version()
+{
+    return g_rga_ver.empty() ? "?" : g_rga_ver.c_str();
+}
+
+/* 把调度核限定到带 IOMMU 的 RGA3（core0|core1）。
+ * RK3588 有 3 个 RGA 核：rga3_core0/rga3_core1 各带独立 IOMMU（可映射 >4GB），
+ * rga2 无 IOMMU，只能寻址 4GB 以下的物理地址。默认调度可能把任务派给 rga2，
+ * 一旦 dma_buf 落在 4GB 以上就报 "RGA_MMU unsupported memory larger than 4G!"。
+ * 这里显式把调度核掩码设成 RGA3 两核，绕开 rga2。成功时不打日志（信息并入汇总行）。
+ * 注意：imconfig 是进程级全局配置，须在 improcess 之前调用。 */
+void rga_use_rga3_only()
+{
+    IM_STATUS st = imconfig(IM_CONFIG_SCHEDULER_CORE,
+                            IM_SCHEDULER_RGA3_CORE0 | IM_SCHEDULER_RGA3_CORE1);
+    if (st != IM_STATUS_SUCCESS && st != IM_STATUS_NOERROR)
+        std::fprintf(stderr, "[cpp] imconfig 限定 RGA3 失败: %s\n", imStrError_t(st));
 }
 
 /* 公共骨架：wrap fd → 显式 rect → 同步 improcess。

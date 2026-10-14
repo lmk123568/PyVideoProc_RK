@@ -17,6 +17,10 @@ struct DmaBuf {
  * 失败时 fd = -1。 */
 DmaBuf dmabuf_alloc(size_t len);
 
+/* 当前实际选用的 dma_heap 短名（如 "system-dma32" / "system"；尚未分配过返回 "?"）。
+ * 给汇总日志用，本身不打印。 */
+const char *dmabuf_heap_name();
+
 /* CPU 访问 dma_buf 前后跟内核"打招呼"（cache 一致性）：
  *   读硬件刚写的内存前 → dmabuf_read_begin（invalidate，丢掉 CPU 里的旧行）
  *   CPU 要写时         → dmabuf_write_begin / dmabuf_write_end 成对使用

@@ -59,15 +59,16 @@ RtspH264Source::RtspH264Source(const std::string &url)
         ::dup2(pipefd[1], 1);
         ::close(pipefd[0]);
         ::close(pipefd[1]);
-        char arg_timeout[] = "10000000";   /* 10s socket IO 超时（ffmpeg 4.4 的
-                                              rtsp 叫 -stimeout，微秒；新版本才叫
-                                              -rw_timeout，写错名 ffmpeg 直接退出） */
+        char arg_timeout[] = "10000000";   /* 10s socket IO 超时（微秒）。
+                                              ffmpeg 5.0 起 rtsp 的这个参数由
+                                              -stimeout 改名为 -timeout；名字写错
+                                              ffmpeg 会直接退出（本机是 ffmpeg 6.0） */
         char *argv[] = {
             (char *)"ffmpeg",
             (char *)"-nostdin",
             (char *)"-loglevel",  (char *)"warning",
             (char *)"-rtsp_transport", (char *)"tcp",
-            (char *)"-stimeout",  arg_timeout,
+            (char *)"-timeout",  arg_timeout,
             (char *)"-i",         (char *)url.c_str(),
             (char *)"-map",       (char *)"0:v:0",   /* 只要第一路视频 */
             (char *)"-c",         (char *)"copy",    /* 不重编码，只拆包 */

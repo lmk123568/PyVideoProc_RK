@@ -44,8 +44,8 @@ MppDecoder::MppDecoder(H264Source &src, Codec codec)
     mpi_->control(ctx_, MPP_DEC_SET_CFG, cfg);
     mpp_dec_cfg_deinit(cfg);
 
-    cpp_log("MppDecoder 就绪（%s, no-thread, split_parse）\n",
-            codec == HEVC ? "HEVC" : "H264");
+    // cpp_log("MppDecoder 就绪（%s, no-thread, split_parse）\n",
+    //         codec == HEVC ? "HEVC" : "H264");
 }
 
 MppDecoder::~MppDecoder()
@@ -102,14 +102,12 @@ bool MppDecoder::next_frame()
             idle = 0;
 
             if (mpp_frame_get_info_change(f)) {
-                /* 格式协商帧：记下参数、回 ACK（不回就死锁） */
+                /* 格式协商帧：记下参数、回 ACK（不回就死锁）。
+                 * 不在此打印——源分辨率由 rk_decoder 的汇总行统一输出。 */
                 cur_.width  = mpp_frame_get_width(f);
                 cur_.height = mpp_frame_get_height(f);
                 cur_.hor_stride = mpp_frame_get_hor_stride(f);
                 cur_.ver_stride = mpp_frame_get_ver_stride(f);
-                cpp_log("MPP 协商: %dx%d stride=%d/%d bufsize=%lu\n",
-                        cur_.width, cur_.height, cur_.hor_stride, cur_.ver_stride,
-                        (unsigned long)mpp_frame_get_buf_size(f));
                 mpi_->control(ctx_, MPP_DEC_SET_INFO_CHANGE_READY, NULL);
                 info_acked_ = true;
                 mpp_frame_deinit(&f);

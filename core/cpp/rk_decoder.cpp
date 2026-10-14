@@ -56,9 +56,10 @@ void rkd_log(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    std::fprintf(stderr, "[rkd] ");
+    std::fprintf(stderr, "[cpp] ");
     std::vfprintf(stderr, fmt, ap);
     std::fflush(stderr);
+    va_end(ap);
 }
 
 /* numpy 视图的保活链（a.md 步骤⑤）：
@@ -117,10 +118,8 @@ public:
         stop_flag_ = false;
         running_   = true;
         th_ = std::thread(&RkDecoder::thread_main, this);
-        if (step_ > 1)
-            rkd_log("start: %s, 每 %d 帧取 1 帧 \n", url_.c_str(), step_);
-        else
-            rkd_log("start: %s\n", url_.c_str());
+        /* 启动日志不在这里打：源分辨率/内存池要等第一帧才知，统一在
+         * run_session() 里池就绪时打一行汇总 */
     }
 
     void stop()
@@ -156,7 +155,8 @@ public:
             e.pool->release(e.slot);
         }
         pool_.reset();
-        rkd_log("stop: 共解 %d 帧，丢 %d\n", frames_.load(), dropped_.load());
+        rkd_log("解码线程退出，stop: 共解 %d 帧，丢 %d\n",
+                frames_.load(), dropped_.load());
     }
 
     /* 取一帧：None = 暂时没有。timeout_ms>0 时最多等这么久（睡眠期间放掉 GIL） */
@@ -226,13 +226,22 @@ private:
     void thread_main()
     {
         const bool is_rtsp = url_.rfind("rtsp://", 0) == 0;
+        /* 只用带 IOMMU 的 RGA3 核：本板 rga2 无 IOMMU，只能寻址 4GB 以下，
+         * 默认调度若派给它，落在 4GB 以上的 dma_buf 会报
+         * "RGA_MMU unsupported memory larger than 4G!"。
+         * 必须在任何 improcess 之前、且在这个真正调 RGA 的线程里设置。 */
+        if (out_w_ > 0)
+            rga_use_rga3_only();
         while (!stop_flag_.load()) {
             try {
                 run_session(is_rtsp);
             } catch (const std::exception &e) {
                 std::lock_guard<std::mutex> l(err_mu_);
                 last_err_ = e.what();
-                rkd_log("会话结束: %s\n", e.what());
+                /* 正常收工（stop() 踢断流）时"会话结束"不是故障，不刷长提示；
+                 * 只有意外断流才打印诊断信息。 */
+                if (!stop_flag_.load())
+                    rkd_log("会话结束: %s\n", e.what());
             }
             if (stop_flag_.load())
                 break;
@@ -242,7 +251,6 @@ private:
             cv_.wait_for(lk, std::chrono::milliseconds(is_rtsp ? 1000 : 500),
                          [this] { return stop_flag_.load(); });
         }
-        rkd_log("解码线程退出\n");
     }
 
     /* 一个"会话" = 建源 + 建解码器 + 一直解到流结束/出错。
@@ -288,8 +296,14 @@ private:
                                                          /*quiet=*/true);
                     w_.store(pw);
                     h_.store(ph);
-                    rkd_log("RGA 输出池就绪: 源 %dx%d → %dx%d RGB × %d slots\n",
-                            fi.width, fi.height, pw, ph, nslots_);
+                    /* 一个进程一行汇总（源分辨率这一刻才确定，所以放这）：
+                     * 拉流地址 / 编码+源分辨率 / RGA 输出尺寸 / 抽帧步长 /
+                     * RGA 版本 / dma_heap / 内存池 */
+                    rkd_log("start: %s, h264 %dx%d, resize%dx%d, step%d, "
+                            "rga %s, dma_heap %s, pool %d×%zu B\n",
+                            url_.c_str(), fi.width, fi.height,
+                            pw, ph, step_, rga_version(), dmabuf_heap_name(),
+                            nslots_, (size_t)pw * ph * 3);
                 }
                 sw_.store(fi.width);
                 sh_.store(fi.height);

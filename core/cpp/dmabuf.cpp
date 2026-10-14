@@ -6,6 +6,7 @@
 #include <sys/mman.h>
 
 #include <cstdio>
+#include <cstring>
 
 #include <linux/dma-buf.h>
 #include <linux/dma-heap.h>
@@ -19,25 +20,29 @@
  * 分配保证落在低 4G。MPP 自己的 allocator 也是优先用它（librockchip_mpp
  * 里有 "system-dma32" 字符串），所以解码帧侧不踩这个坑。
  * 老内核没有该 heap 时回退 system（那种板子内存小，本来也到不了 4G 以上）。 */
+static const char *g_heap_name = nullptr;
+
 static int open_dma_heap()
 {
     static const char *kHeaps[] = {
         "/dev/dma_heap/system-dma32",
         "/dev/dma_heap/system",
     };
-    static bool logged = false;
 
     for (const char *path : kHeaps) {
         int fd = open(path, O_RDWR);
         if (fd >= 0) {
-            if (!logged) {
-                std::fprintf(stderr, "[cpp] dma_heap: %s\n", path);
-                logged = true;
-            }
+            /* 记下短名（去掉目录前缀）给汇总日志用，不在此打印 */
+            g_heap_name = path + std::strlen("/dev/dma_heap/");
             return fd;
         }
     }
     return -1;
+}
+
+const char *dmabuf_heap_name()
+{
+    return g_heap_name ? g_heap_name : "?";
 }
 
 DmaBuf dmabuf_alloc(size_t len)

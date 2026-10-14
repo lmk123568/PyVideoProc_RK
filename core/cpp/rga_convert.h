@@ -17,8 +17,19 @@ bool rga_nv12_to_rgb_strided(int src_fd, int src_w, int src_h,
                              int dst_fd, int dst_w, int dst_h);
 
 /*
- * 启动时把运行库版本打到 stderr（querystring(RGA_VERSION)），方便排查版本漂开。
- * 不再用 imcheckHeader() 做硬配对检查 —— 那是 im2d API 1.9.3+ 才有的，老库
- * 头文件/.so 都没这符号，硬上编译不过。API 够用与否由 CMake 实测把关。
+ * 启动时探测运行库可用性（querystring），把版本号缓存起来供汇总日志使用，
+ * 本身不打印。不再用 imcheckHeader() 做硬配对检查 —— 那是 im2d API 1.9.3+
+ * 才有的，老库头文件/.so 都没这符号，硬上编译不过。API 够用与否由 CMake 实测把关。
  */
 void rga_check_api();
+
+/* 缓存的 RGA 运行库版本（如 "v1.10.0_[8]"；rga_check_api 之前调用返回 "?"）。 */
+const char *rga_version();
+
+/*
+ * 把 RGA 调度核限定到带 IOMMU 的 RGA3（core0|core1），避开无 IOMMU、只能
+ * 寻址 4GB 以下的 RGA2。多核板（RK3588）上默认调度可能把任务派给 RGA2，
+ * 一旦 dma_buf 落在 4GB 以上就报 "RGA_MMU unsupported memory larger than 4G!"。
+ * 必须在任何 improcess 之前、且在真正调用 RGA 的那个线程里调用。
+ */
+void rga_use_rga3_only();

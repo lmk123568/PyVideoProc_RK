@@ -17,8 +17,8 @@
 
 class DmaBufPool {
 public:
-    /* quiet=true 关掉每次 acquire/release 的日志（后台线程 25fps 场景防刷屏；
-     * 池就绪/析构两行仍然打印）。cpp/ 各模块默认 false，行为不变。 */
+    /* quiet=true 关掉本池的全部日志（就绪/析构 + 每次 acquire/release）；
+     * 后台线程 25fps 场景防刷屏。cpp/ 各模块默认 false，行为不变。 */
     DmaBufPool(int nslots, int width, int height, int channels,
                bool quiet = false);
     ~DmaBufPool();

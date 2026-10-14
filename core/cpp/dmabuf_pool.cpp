@@ -36,9 +36,10 @@ DmaBufPool::DmaBufPool(int nslots, int width, int height, int channels, bool qui
     for (int i = nslots - 1; i >= 0; i--)
         free_.push_back(i);
 
-    ZCP_LOG("pool 就绪: %d slots × %zu B (w=%d h=%d c=%d), vaddr %p..%p\n",
-            nslots, len_, width_, height_, channels_,
-            bufs_[0].vaddr, bufs_.back().vaddr);
+    if (!quiet_)
+        ZCP_LOG("pool 就绪: %d slots × %zu B (w=%d h=%d c=%d), vaddr %p..%p\n",
+                nslots, len_, width_, height_, channels_,
+                bufs_[0].vaddr, bufs_.back().vaddr);
 }
 
 DmaBufPool::~DmaBufPool()
@@ -47,7 +48,8 @@ DmaBufPool::~DmaBufPool()
         if (b.vaddr) munmap(b.vaddr, b.len);
         if (b.fd >= 0) close(b.fd);
     }
-    ZCP_LOG("pool 析构: %zu 块 dma_buf 已归还内核\n", bufs_.size());
+    if (!quiet_)
+        ZCP_LOG("pool 析构: %zu 块 dma_buf 已归还内核\n", bufs_.size());
 }
 
 int DmaBufPool::acquire()
