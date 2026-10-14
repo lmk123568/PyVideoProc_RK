@@ -80,12 +80,12 @@ uv run python main.py
 - 测试视频流 `h264 1980x1280@25fps`
 - RK3588 开最高性能
 
-|      | CPU  | NPU                                | RAM     | YOLO Infer     |
-| ---- | ---- | ---------------------------------- | ------- | -------------- |
-| 3路  | 6%   | Core0: 11%, Core1: 12%, Core2: 12% | 2.46 GB | 36 ms / frame  |
-| 6路  | 11%  | Core0: 23%, Core1: 23%, Core2: 24% | 2.72 GB | 68 ms / frame  |
-| 9路  | 15%  | Core0: 40%, Core1: 42%, Core2: 41% | 3.02 GB | 89 ms / frame  |
-| 12路 | 20%  | Core0: 56%, Core1: 59%, Core2: 57% | 3.29 GB | 110 ms / frame |
+|      | CPU  | NPU                                | RAM    | YOLO Infer     |
+| ---- | ---- | ---------------------------------- | ------ | -------------- |
+| 3路  | 2%   | Core0: 9%, Core1: 10%, Core2: 10%  | 0.9 GB | 35 ms / frame  |
+| 6路  | 8%   | Core0: 23%, Core1: 23%, Core2: 24% | 1.0 GB | 53 ms / frame  |
+| 9路  | 12%  | Core0: 33%, Core1: 34%, Core2: 34% | 1.2 GB | 74 ms / frame  |
+| 12路 | 16%  | Core0: 48%, Core1: 50%, Core2: 51% | 1.5 GB | 98 ms / frame  |
 
 ## License
 
