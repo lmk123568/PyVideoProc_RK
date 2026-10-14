@@ -1,5 +1,13 @@
 # PyVideoProc_RK
 
+<p>
+  <img alt="System" src="https://img.shields.io/badge/System-Ubuntu_22-E95420?logo=ubuntu&logoColor=white&style=flat-square">
+  <img alt="Kernel" src="https://img.shields.io/badge/Kernel-6.x-00add8?style=flat-square">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white&style=flat-square">
+  <img alt="Toolkit" src="https://img.shields.io/badge/Toolkit-rknn__toolkit2-7c4f9e?style=flat-square">
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-2ea94f?logo=mitlicense&logoColor=white&style=flat-square">
+</p>
+
 基于 RK3588 的 Python 多进程多路视频解码推理实现
 
 核心特性：
@@ -24,7 +32,7 @@
 > ```
 >
 
-RK3588 开发板所需系统为 ubuntu 22，内核版本为 6.x，推荐镜像包下载：[百度网盘](https://pan.baidu.com/s/1wQJADWox-dDGDBWesU4PBA?pwd=gvbg)
+RK3588 开发板所需系统为 ubuntu 22.04，内核版本为 6.x，推荐镜像包下载：[百度网盘](https://pan.baidu.com/s/1wQJADWox-dDGDBWesU4PBA?pwd=gvbg)
 
 搭建环境
 
@@ -88,5 +96,4 @@ uv run python main.py
 | 12路 | 16%  | Core0: 48%, Core1: 50%, Core2: 51% | 1.5 GB | 98 ms / frame  |
 
 ## License
-
-MIT
+[MIT](./LICENSE)
