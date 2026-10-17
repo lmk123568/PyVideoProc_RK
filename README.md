@@ -1,10 +1,10 @@
 # PyVideoProc_RK
 
 <p>
-  <img alt="System" src="https://img.shields.io/badge/System-Ubuntu_22-E95420?logo=ubuntu&logoColor=white&style=flat-square">
+  <img alt="System" src="https://img.shields.io/badge/System-Ubuntu_22.04-E95420?logo=ubuntu&logoColor=white&style=flat-square">
   <img alt="Kernel" src="https://img.shields.io/badge/Kernel-6.x-00add8?style=flat-square">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white&style=flat-square">
-  <img alt="Toolkit" src="https://img.shields.io/badge/Toolkit-rknn__toolkit2-7c4f9e?style=flat-square">
+  <img alt="Toolkit" src="https://img.shields.io/badge/rknn__toolkit2-2.3.2-7c4f9e?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/License-MIT-2ea94f?logo=mitlicense&logoColor=white&style=flat-square">
 </p>
 
